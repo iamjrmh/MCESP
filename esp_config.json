@@ -1,0 +1,30 @@
+{
+  "enabled": true,
+  "box_esp": true,
+  "marker_style": "skeleton",
+  "show_local": true,
+  "show_names": true,
+  "show_distance": true,
+  "snap_lines": true,
+  "enemy_color": [
+    255,
+    0,
+    0
+  ],
+  "local_color": [
+    0,
+    255,
+    0
+  ],
+  "box_height_world": 100.0,
+  "box_y_offset": 0,
+  "dot_radius": 8,
+  "show_debug": false,
+  "toggle_key": "F2",
+  "aimbot_enabled": true,
+  "aimbot_key": "",
+  "aimbot_fov": 150,
+  "aimbot_strength": 0.5,
+  "aimbot_target_offset": 0.0,
+  "aimbot_show_fov": true
+}
