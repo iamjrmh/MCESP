@@ -33,7 +33,14 @@ pip install pymem PyQt5 pywin32
 ```
 
 ## Usage
+1. Run MCESP.exe - It'll print `Waiting on game...` if the game isn't open yet, then wait for it. Once found: `Waiting on injection...` then `Injected` - this is just it attaching to read memory, not actually injecting anything into the game.
+2. Open MECCHA Chameleon
+3. A transparent overlay appears over the game window, plus a settings menu.
+4. Configure everything from the menu, then optionally hit **Save Settings** so it's there next time.
+5. Press INSERT to open/close the Menu
 
+OR
+   
 1. Launch MECCHA CHAMELEON and get into a match/lobby.
 2. Run:
    ```bash
