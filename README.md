@@ -45,6 +45,7 @@ pip install pymem PyQt5 pywin32
 
 ## Usage
 
+
 1. Run MCESP.exe - It'll print `Waiting on game...` if the game isn't open yet, then wait for it. Once found: `Waiting on injection...` then `Injected` - this is just it attaching to read memory, not actually injecting anything into the game.
 2. Open MECCHA Chameleon
 3. A transparent overlay appears over the game window, plus a settings menu.
@@ -56,7 +57,7 @@ OR
 1. Launch MECCHA CHAMELEON and get into a match/lobby.
 2. Run:
    ```bash
-   python esp.py
+   python MCESP.py
    ```
 3. It'll print `Waiting on game...` if the game isn't open yet, then wait for it. Once found: `Waiting on injection...` then `Injected` - this is just it attaching to read memory, not actually injecting anything into the game.
 4. A transparent overlay appears over the game window, plus a settings menu.
@@ -83,7 +84,7 @@ To rebind any of these: click **Record Key** next to it in the menu (ESP toggle 
 - Everything except a couple of specific offsets is found dynamically via the engine's own reflection data, so it should keep working across most game patches. The **skeleton marker specifically** relies on two hardcoded offsets (bone pose cache + bone name table) found by manually scanning this exact game build (5.6.1) - if a future update breaks *only* the skeleton view (dot/box still fine), that's why; ping whoever set this up to re-find them.
 - **Force Spectate** calls the game's own internal functions directly rather than pretending to press a key - it should keep working across patches the same way most of the tool does (the functions it calls are found dynamically each session), except one small hardcoded flag check it uses to avoid re-toggling free-cam back off if you press the key twice. Worst case if that ever breaks: the key still forces you into spectate/free-cam fine, it just might toggle free-cam off if you press it again while already in it.
 - The script expects the game window title `Chameleon  `. If that ever changes, `Overlay._find_game_window()` needs updating.
-- Settings save to `esp_config.json` next to `esp.py`.
+- Settings save to `Documents\MCESP\esp_config.json` - shared between the compiled `.exe` and the source version, so switching between them (or updating one) doesn't lose your setup.
 
 ## Disclaimer
 
