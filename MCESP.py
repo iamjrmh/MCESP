@@ -11,6 +11,7 @@ import math
 import ctypes
 import time
 import colorsys
+import urllib.request
 from dataclasses import dataclass, asdict, fields
 from typing import Tuple
 
@@ -1015,10 +1016,10 @@ class MecchaESP:
     # 5 then 4, call the game's own GoToSpectate/FreeCameraChange UFunctions
     # directly via ProcessEvent -- works from any role or location (in a
     # match or still in the lobby), unlike the keypresses which only do
-    # anything once actually spawned in.
+    # anything once actually spawned in. GoToSpectate and FreeCameraChange
+    # are both looked up dynamically each session (by name, via reflection),
+    # so this stays self-healing the same way everything else does.
     # -------------------------------------------------------------------
-    FREE_CAM_FLAG_OFFSET = 0x388  # on BP_SpectatePawn_cLeon_C; confirmed live via before/after diff
-
     def _find_function_on_class(self, cls_addr, func_name):
         child = rp(self.pm, cls_addr + OFFSETS["UStruct::Children"])
         depth = 0
@@ -1058,12 +1059,6 @@ class MecchaESP:
         if not func:
             return False
         return self.call_ufunction(pawn, func, struct.pack("<B", 1)) is not None
-
-    def is_free_camera_active(self, spectate_pawn):
-        try:
-            return bool(self.pm.read_bytes(spectate_pawn + self.FREE_CAM_FLAG_OFFSET, 1)[0])
-        except Exception:
-            return False
 
     def force_free_camera_change(self, spectate_pawn):
         cls = rp(self.pm, spectate_pawn + OFFSETS["UObjectBase::ClassPrivate"])
@@ -1588,6 +1583,49 @@ def rainbow_color(speed=0.15):
 def rainbow_hex(speed=0.15):
     r, g, b = rainbow_color(speed)
     return f"#{r:02x}{g:02x}{b:02x}"
+
+
+# ---------------------------------------------------------------------------
+# Update check: compares this local build's VERSION against the latest
+# published GitHub Release's tag. Bump VERSION here to match the tag used
+# when publishing a new release so buddies' "Check for Updates" button
+# reports correctly.
+# ---------------------------------------------------------------------------
+VERSION = "2.1.0"
+_UPDATE_REPO = "iamjrmh/MCESP-MECCHA-CHAMELEON-External-ESP-Aimbot"
+UPDATE_API_URL = f"https://api.github.com/repos/{_UPDATE_REPO}/releases/latest"
+UPDATE_DOWNLOAD_URL = f"https://github.com/{_UPDATE_REPO}/releases/latest/download/MCESP.exe"
+UPDATE_RELEASES_URL = f"https://github.com/{_UPDATE_REPO}/releases/latest"
+
+
+def _parse_version(v):
+    try:
+        return tuple(int(p) for p in v.strip().lstrip("vV").split("."))
+    except (ValueError, AttributeError):
+        return None
+
+
+def check_for_update():
+    """Returns (status, remote_tag): status is 'up_to_date',
+    'update_available', or 'error'. A short timeout keeps a dead/unreachable
+    GitHub from hanging the button for long."""
+    try:
+        req = urllib.request.Request(
+            UPDATE_API_URL,
+            headers={"Accept": "application/vnd.github+json", "User-Agent": "MCESP-UpdateCheck"})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read().decode("utf-8", errors="ignore"))
+    except Exception:
+        return "error", None
+
+    tag = data.get("tag_name", "")
+    remote_version = _parse_version(tag)
+    local_version = _parse_version(VERSION)
+    if remote_version is None or local_version is None:
+        return "error", tag
+    if remote_version > local_version:
+        return "update_available", tag
+    return "up_to_date", tag
 
 
 # ---------------------------------------------------------------------------
@@ -2124,7 +2162,7 @@ class Menu(QWidget):
         )
         card_layout.addWidget(name)
 
-        author = QLabel("by JURMR")
+        author = QLabel(f"by JURMR  ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢  v{VERSION}")
         author.setAlignment(Qt.AlignCenter)
         author.setStyleSheet("color: #999; font-size: 11px; border: none; background: transparent;")
         card_layout.addWidget(author)
@@ -2139,7 +2177,48 @@ class Menu(QWidget):
         links_row.addStretch(1)
         card_layout.addLayout(links_row)
 
+        card_layout.addSpacing(10)
+
+        self.btn_check_update = QPushButton("Check for Updates")
+        self.btn_check_update.setCursor(Qt.PointingHandCursor)
+        self.btn_check_update.clicked.connect(self._check_for_update)
+        card_layout.addWidget(self.btn_check_update)
+
+        self.lbl_update_status = QLabel(" ")
+        self.lbl_update_status.setAlignment(Qt.AlignCenter)
+        self.lbl_update_status.setWordWrap(True)
+        self.lbl_update_status.setOpenExternalLinks(True)
+        self.lbl_update_status.setStyleSheet("color: #999; font-size: 10px; border: none; background: transparent;")
+        card_layout.addWidget(self.lbl_update_status)
+
         return card
+
+    def _check_for_update(self):
+        self.btn_check_update.setEnabled(False)
+        self.btn_check_update.setText("Checking...")
+        self.lbl_update_status.setText(" ")
+        QApplication.processEvents()  # repaint "Checking..." before the blocking request
+
+        status, remote = check_for_update()
+
+        self.btn_check_update.setEnabled(True)
+        self.btn_check_update.setText("Check for Updates")
+
+        if status == "up_to_date":
+            self.lbl_update_status.setStyleSheet(
+                "color: #6fbf6f; font-size: 10px; border: none; background: transparent;")
+            self.lbl_update_status.setText(f"Up to date (v{VERSION})")
+        elif status == "update_available":
+            self.lbl_update_status.setStyleSheet(
+                "color: #eee; font-size: 10px; border: none; background: transparent;")
+            self.lbl_update_status.setText(
+                f"Update available: v{VERSION} -&gt; {remote}<br>"
+                f'<a href="{UPDATE_DOWNLOAD_URL}" style="color:{RGB_ACCENT};">Download MCESP.exe</a>'
+            )
+        else:
+            self.lbl_update_status.setStyleSheet(
+                "color: #d97a7a; font-size: 10px; border: none; background: transparent;")
+            self.lbl_update_status.setText("Could not check for updates (no internet or GitHub unreachable)")
 
     def _link_button(self, text, url):
         btn = QPushButton(text)
@@ -2955,9 +3034,12 @@ def main():
         if pending_at and now >= pending_at:
             _force_spectate_state["pending_free_cam_at"] = 0
             local_pawn = _get_local_pawn()
+            # This only ever fires right after a fresh GoToSpectate call,
+            # which never turns free-cam on by itself (same as the game's
+            # own 5-then-4 flow) -- so it's always safe to call unconditionally
+            # here, with no need to check a live "is it already on" flag first.
             if local_pawn and "SpectatePawn" in esp._class_name(local_pawn):
-                if not esp.is_free_camera_active(local_pawn):
-                    esp.force_free_camera_change(local_pawn)
+                esp.force_free_camera_change(local_pawn)
 
     key_timer = QTimer()
     key_timer.timeout.connect(poll_keys)
